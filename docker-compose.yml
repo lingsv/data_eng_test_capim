@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+
+  database:
+    image: postgres:14.1-alpine  # Use a specific, supported Postgres version
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=orion  # Database name for Prefect Orion
+    expose:
+      - 5432
+    volumes:
+      - postgres:/var/lib/postgresql/data  # Persistent storage for Postgres data
+
+  orion:
+    image: prefecthq/prefect:2-python3.10  # Use compatible Prefect version
+    restart: always
+    volumes:
+      - prefect:~/.prefect  # Persist Prefect configuration and flows
+      - ./flows:/app/flows  # Mount your Prefect flow directory (adjust path as needed)
+    entrypoint: ["prefect", "orion", "start"]  # Start Prefect Orion
+    environment:
+      - PREFECT_ORION_API_HOST=0.0.0.0  # Bind Orion API to all interfaces
+      - PREFECT_ORION_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:postgres@database:5432/orion  # Connection details
+    ports:
+      - 4200:4200  # Expose Orion UI at port 4200
+
+  # (Optional) Worker service (if your pipeline requires parallel execution)
+  worker:
+    image: prefecthq/prefect:2-python3.10  # Match Prefect image version
+    restart: unless-stopped  # Restart only if manually stopped
+    depends_on:
+      - orion  # Wait for Orion to be ready before starting worker
+    command: ["prefect", "worker", "start"]  # Start Prefect worker
+    environment:
+      - PREFECT_ORION_ADDRESS=http://orion:4200  # Worker connection to Orion
+
+volumes:
+  prefect:  # Volume for Prefect configuration (already defined in `orion` service)
+  postgres:  # Volume for Postgres data (already defined in `database` service)
+  flows:  # New volume to mount your Prefect flow directory
