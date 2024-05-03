@@ -3,41 +3,43 @@ version: "3.9"
 services:
 
   database:
-    image: postgres:14.1-alpine  # Use a specific, supported Postgres version
+    image: postgres:14.1-alpine
     restart: always
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=orion  # Database name for Prefect Orion
+      - POSTGRES_DB=orion
     expose:
       - 5432
     volumes:
-      - postgres:/var/lib/postgresql/data  # Persistent storage for Postgres data
+      - postgres:/var/lib/postgresql/data
 
-  orion:
-    image: prefecthq/prefect:2-python3.10  # Use compatible Prefect version
+  metabase:
+    image: metabase/metabase
+    restart: always
+    ports:
+      - "3002:3000"
+    depends_on:
+      - database
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: orion
+      MB_DB_PORT: 5432
+      MB_DB_USER: postgres
+      MB_DB_PASS: postgres
+      MB_DB_HOST: database
+
+  python:
+    image: python:3.8-alpine  # Alterada para a imagem Python Alpine
     restart: always
     volumes:
-      - prefect:~/.prefect  # Persist Prefect configuration and flows
-      - ./flows:/app/flows  # Mount your Prefect flow directory (adjust path as needed)
-    entrypoint: ["prefect", "orion", "start"]  # Start Prefect Orion
-    environment:
-      - PREFECT_ORION_API_HOST=0.0.0.0  # Bind Orion API to all interfaces
-      - PREFECT_ORION_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:postgres@database:5432/orion  # Connection details
-    ports:
-      - 4200:4200  # Expose Orion UI at port 4200
-
-  # (Optional) Worker service (if your pipeline requires parallel execution)
-  worker:
-    image: prefecthq/prefect:2-python3.10  # Match Prefect image version
-    restart: unless-stopped  # Restart only if manually stopped
+      - ./flows:/app
+      - ./requirements.txt:/app/requirements.txt
     depends_on:
-      - orion  # Wait for Orion to be ready before starting worker
-    command: ["prefect", "worker", "start"]  # Start Prefect worker
-    environment:
-      - PREFECT_ORION_ADDRESS=http://orion:4200  # Worker connection to Orion
+      - database
+    command: >
+      sh -c "apk add --no-cache build-base libffi-dev openssl-dev && pip install -r /app/requirements.txt && python /app/run.py"  # Instala dependências e executa run.py
+    tty: true
 
 volumes:
-  prefect:  # Volume for Prefect configuration (already defined in `orion` service)
-  postgres:  # Volume for Postgres data (already defined in `database` service)
-  flows:  # New volume to mount your Prefect flow directory
+  postgres:

@@ -60,24 +60,19 @@ def load_data_to_postgres(data: pd.DataFrame) -> None:
     Args:
         data (pd.DataFrame): Target dataframe.
     """
-
-    with open('credentials.json', 'r') as jsonfile:
-
-        postgres_credentials = json.load(jsonfile)
-
-    log('Loaded postgres credentials.')
-
+    # Conexão ao banco de dados
     connection_string = psycopg2.connect(
-        host=postgres_credentials['host'],
-        database=postgres_credentials['database'],
-        user=postgres_credentials['user'],
-        password=postgres_credentials['password'],
+        host="database",
+        database="orion",
+        user="postgres",
+        password="postgres",
     )
 
     with connection_string.cursor() as cursor:
+        # Criação da tabela se não existir
         create_table = """
             CREATE TABLE IF NOT EXISTS address_data(
-                id INT,
+                id SERIAL PRIMARY KEY,
                 nome VARCHAR,
                 idade INT,
                 email VARCHAR,
@@ -87,17 +82,25 @@ def load_data_to_postgres(data: pd.DataFrame) -> None:
                 bairro VARCHAR,
                 cidade VARCHAR,
                 estado VARCHAR,
-                cep VARCHAR,
-           
+                cep VARCHAR
             )
             """
-
         cursor.execute(create_table)
 
-        insert_query = "INSERT INTO IF NOT EXISTS address_data VALUES %s"
+        # Upsert dos dados
+        insert_query = """
+            INSERT INTO address_data (nome, idade, email, telefone, logradouro, numero, bairro, cidade, estado, cep)
+            VALUES %s
+            ON CONFLICT (id) DO UPDATE SET
+                nome = EXCLUDED.nome,
+                idade = EXCLUDED.idade,
+                email = EXCLUDED.email,
+                telefone = EXCLUDED.telefone,
+                logradouro = EXCLUDED.logradouro,
+                numero = EXCLUDED.numero,
+                bairro = EXCLUDED.bairro,
+                cidade = EXCLUDED.cidade,
+                estado = EXCLUDED.estado,
+                cep = EXCLUDED.cep
+            """
         extras.execute_values(cursor, insert_query, data.values)
-
-    connection_string.commit()
-    connection_string.close()
-
-    log('Loaded data to postgres.')
