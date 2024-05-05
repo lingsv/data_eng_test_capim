@@ -62,8 +62,9 @@ def load_data_to_postgres(data: pd.DataFrame) -> None:
     """
     # Conexão ao banco de dados
     connection_string = psycopg2.connect(
-        host="database",
-        database="orion",
+        host="0.0.0.0",  # Ou o endereço IP do seu host, se diferente
+        port="5432",
+        database="postgres",
         user="postgres",
         password="postgres",
     )
@@ -89,7 +90,7 @@ def load_data_to_postgres(data: pd.DataFrame) -> None:
 
         # Upsert dos dados
         insert_query = """
-            INSERT INTO address_data (nome, idade, email, telefone, logradouro, numero, bairro, cidade, estado, cep)
+            INSERT INTO address_data (id, nome, idade, email, telefone, logradouro, numero, bairro, cidade, estado, cep)
             VALUES %s
             ON CONFLICT (id) DO UPDATE SET
                 nome = EXCLUDED.nome,

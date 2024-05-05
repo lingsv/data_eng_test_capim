@@ -1,11 +1,13 @@
 from prefect import Flow, Parameter
 from tasks import (get_data, load_data_to_postgres, process_data,
                    )
+import os
 
 with Flow('Extracting Fictional data data') as adress_data:
 
     # Parameter
-    path = Parameter('path', default='/home/carol/Documentos/Repos/pessoal/data_eng_test_capim/pipeline/data/data.json')
+    path = Parameter('path', default=os.path.abspath('/home/carol/Documentos/data_eng_test_capim/flows/data.json'))
+
 
     # Tasks
 
