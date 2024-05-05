@@ -14,8 +14,16 @@
 └── requirements.txt
 ```
 
+---
+
 ## Arquivos
 
+- **Open data.ipynb**: Notebook com as trasnformações feitas no pipeline;
+- **pipeline.py**: Arquivo do pipeline Python;
+- **data.json**: Arquivo com os dados utilizados no pipeline.
+- **requirements.txt**: Arquivo com as bibliotecas python necessárias.
+
+----
 
 ## Como utilizar este repositório
 
